@@ -8,7 +8,7 @@ import difflib
 import re
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Annotated, Any
+from typing import List, Optional, Annotated, Any, Dict
 
 from fastapi import FastAPI, APIRouter, Header, HTTPException, UploadFile, File, Form
 from dotenv import load_dotenv
@@ -101,19 +101,142 @@ class CompleteLessonRequest(BaseModel):
     xp: int = 20
 
 
-# ----------------------------- Theme catalog -----------------------------
-THEMES: List[dict] = [
-    {"id": "salutations", "title": "Salutations", "subtitle": "Dire bonjour et se présenter", "icon": "hand-wave", "color": "#FA6400"},
-    {"id": "voyage", "title": "Voyage", "subtitle": "Se déplacer et demander son chemin", "icon": "airplane", "color": "#38BDF8"},
-    {"id": "travail", "title": "Travail", "subtitle": "Le vocabulaire du bureau", "icon": "briefcase", "color": "#8B5CF6"},
-    {"id": "nourriture", "title": "Nourriture", "subtitle": "Au restaurant et au marché", "icon": "food", "color": "#F43F5E"},
-    {"id": "famille", "title": "Famille", "subtitle": "Parler de vos proches", "icon": "account-group", "color": "#34D399"},
-    {"id": "shopping", "title": "Shopping", "subtitle": "Faire ses achats", "icon": "shopping", "color": "#FBBF24"},
-    {"id": "nombres", "title": "Nombres & Temps", "subtitle": "Compter et donner l'heure", "icon": "numeric", "color": "#F59E0B"},
-    {"id": "maison", "title": "Maison", "subtitle": "La vie à la maison", "icon": "home", "color": "#0EA5E9"},
-    {"id": "sante", "title": "Santé", "subtitle": "Chez le médecin", "icon": "heart-pulse", "color": "#EF4444"},
-    {"id": "expressions", "title": "Expressions", "subtitle": "Tournures idiomatiques", "icon": "chat", "color": "#EC4899"},
+# ----------------------------- Personnages (guides) -----------------------------
+# Chaque personnage "possède" un domaine. Anke est le fil rouge (accueil + conversation).
+CHARACTERS: Dict[str, dict] = {
+    "anke": {
+        "id": "anke", "name": "Anke", "role": "Ta guide au quotidien",
+        "color": "#FA6400",
+        "tagline": "Salut ! Moi c'est Anke, je t'accompagne pour tes premiers pas en néerlandais.",
+        "avatar_prompt": "Friendly flat vector character portrait of Anke, a warm smiling Dutch woman around 30 with shoulder-length blonde hair, wearing an orange sweater, simple cartoon mascot style, soft rounded shapes, plain light cream background, centered head and shoulders, modern language-learning app avatar",
+    },
+    "joris": {
+        "id": "joris", "name": "Meneer Joris", "role": "L'expert des démarches",
+        "color": "#0EA5E9",
+        "tagline": "Bonjour, je suis Joris. Je t'aide à gérer l'administratif : commune, papiers, banque…",
+        "avatar_prompt": "Friendly flat vector character portrait of Joris, a helpful Dutch civil servant man around 45 with short grey hair and glasses, wearing a blue shirt, holding a small folder, simple cartoon mascot style, soft rounded shapes, plain light cream background, centered head and shoulders, modern app avatar",
+    },
+    "sofie": {
+        "id": "sofie", "name": "Sofie", "role": "Le monde du travail",
+        "color": "#8B5CF6",
+        "tagline": "Hoi ! Sofie. On prépare ensemble ton CV, tes entretiens et la vie de bureau.",
+        "avatar_prompt": "Friendly flat vector character portrait of Sofie, a confident Dutch professional woman around 35 with brown hair in a bun, wearing a purple blazer, simple cartoon mascot style, soft rounded shapes, plain light cream background, centered head and shoulders, modern app avatar",
+    },
+    "lien": {
+        "id": "lien", "name": "Lien", "role": "Culture & traditions",
+        "color": "#F43F5E",
+        "tagline": "Coucou, c'est Lien ! Je te fais découvrir les fêtes, la cuisine et les coutumes.",
+        "avatar_prompt": "Friendly flat vector character portrait of Lien, a cheerful young Dutch woman around 28 with curly red hair and freckles, wearing a pink top, simple cartoon mascot style, soft rounded shapes, plain light cream background, centered head and shoulders, modern app avatar",
+    },
+    "willem": {
+        "id": "willem", "name": "Professor Willem", "role": "Histoire & le pays",
+        "color": "#F59E0B",
+        "tagline": "Bonjour, Professor Willem. Explorons ensemble l'histoire et le pays.",
+        "avatar_prompt": "Friendly flat vector character portrait of Willem, a kind older Dutch professor around 60 with a short white beard and round glasses, wearing a mustard cardigan, simple cartoon mascot style, soft rounded shapes, plain light cream background, centered head and shoulders, modern app avatar",
+    },
+}
+
+# ----------------------------- Mondes (domaines) -----------------------------
+# Progression logique : de l'arrivée à l'intégration réelle en Flandre / aux Pays-Bas.
+DOMAINS: List[dict] = [
+    {
+        "id": "premiers-mots", "title": "Premiers mots", "subtitle": "Dire bonjour, se présenter",
+        "icon": "hand-wave", "color": "#FA6400", "character": "anke",
+        "context": "les tout premiers échanges pour un francophone qui arrive en Flandre ou aux Pays-Bas : saluer, se présenter, la politesse de base, tutoyer (je/jij) et vouvoyer (u)",
+        "themes": [
+            {"id": "salutations", "title": "Salutations", "subtitle": "Bonjour, au revoir, ça va ?", "icon": "hand-wave"},
+            {"id": "politesse", "title": "Politesse", "subtitle": "Merci, s'il te plaît, pardon", "icon": "hand-heart"},
+            {"id": "se-presenter", "title": "Se présenter", "subtitle": "Nom, âge, d'où tu viens", "icon": "account"},
+        ],
+    },
+    {
+        "id": "vie-quotidienne", "title": "La vie quotidienne", "subtitle": "Courses, café, transports",
+        "icon": "shopping", "color": "#34D399", "character": "anke",
+        "context": "la vie de tous les jours d'un habitant en Flandre/aux Pays-Bas : faire ses courses (Albert Heijn, Colruyt, le marché), commander au café, prendre le train NS/de bus/le vélo, parler de la météo",
+        "themes": [
+            {"id": "courses", "title": "Faire les courses", "subtitle": "Supermarché & marché", "icon": "cart"},
+            {"id": "cafe", "title": "Au café", "subtitle": "Commander à boire et à manger", "icon": "coffee"},
+            {"id": "transports", "title": "Se déplacer", "subtitle": "Train NS, bus, vélo", "icon": "train"},
+            {"id": "meteo", "title": "La météo", "subtitle": "Le temps qu'il fait", "icon": "weather-partly-cloudy"},
+        ],
+    },
+    {
+        "id": "demarches", "title": "Les démarches", "subtitle": "Inburgering & administratif",
+        "icon": "file-document", "color": "#0EA5E9", "character": "joris",
+        "context": "les démarches administratives RÉELLES pour s'installer (l'inburgering) : s'inscrire à la commune (gemeente), le numéro de registre national / BSN, ouvrir un compte en banque, chercher et louer un logement, l'assurance maladie et les rendez-vous officiels. Vocabulaire et phrases concrètes qu'on utilise vraiment aux guichets.",
+        "themes": [
+            {"id": "gemeente", "title": "À la commune", "subtitle": "S'inscrire à la gemeente", "icon": "office-building"},
+            {"id": "bsn", "title": "BSN & papiers", "subtitle": "Numéro national, documents", "icon": "card-account-details"},
+            {"id": "banque", "title": "La banque", "subtitle": "Ouvrir un compte", "icon": "bank"},
+            {"id": "logement", "title": "Le logement", "subtitle": "Chercher & louer", "icon": "home-search"},
+            {"id": "sante-admin", "title": "Santé & assurance", "subtitle": "Médecin, mutuelle", "icon": "hospital-box"},
+        ],
+    },
+    {
+        "id": "travail", "title": "Le travail", "subtitle": "CV, entretien, bureau",
+        "icon": "briefcase", "color": "#8B5CF6", "character": "sofie",
+        "context": "le monde professionnel en Flandre/aux Pays-Bas : rédiger un CV et une lettre de motivation, passer un entretien d'embauche, communiquer avec des collègues au bureau, écrire des emails professionnels",
+        "themes": [
+            {"id": "cv", "title": "CV & candidature", "subtitle": "Se vendre par écrit", "icon": "file-account"},
+            {"id": "entretien", "title": "L'entretien", "subtitle": "Répondre aux questions", "icon": "account-tie"},
+            {"id": "bureau", "title": "Au bureau", "subtitle": "Avec les collègues", "icon": "briefcase"},
+            {"id": "emails", "title": "Emails pro", "subtitle": "Écrire correctement", "icon": "email"},
+        ],
+    },
+    {
+        "id": "culture", "title": "Culture & traditions", "subtitle": "Fêtes, cuisine, coutumes",
+        "icon": "party-popper", "color": "#F43F5E", "character": "lien",
+        "context": "la culture belgo-néerlandaise pour vraiment s'intégrer : les fêtes (Sinterklaas, Koningsdag, carnaval), la cuisine et les spécialités (stroopwafel, frites, hutspot), le savoir-vivre et les codes sociaux du quotidien",
+        "themes": [
+            {"id": "fetes", "title": "Les fêtes", "subtitle": "Sinterklaas, Koningsdag", "icon": "party-popper"},
+            {"id": "cuisine", "title": "La cuisine", "subtitle": "Spécialités locales", "icon": "food-croissant"},
+            {"id": "savoir-vivre", "title": "Savoir-vivre", "subtitle": "Codes & coutumes", "icon": "handshake"},
+        ],
+    },
+    {
+        "id": "pays", "title": "Histoire & le pays", "subtitle": "Géographie, histoire, société",
+        "icon": "map", "color": "#F59E0B", "character": "willem",
+        "context": "comprendre le pays où on vit : la géographie (la Flandre vs les Pays-Bas, les grandes villes, les provinces), un peu d'histoire, et comment la société fonctionne (institutions, régions, langues officielles)",
+        "themes": [
+            {"id": "geographie", "title": "Géographie", "subtitle": "Flandre & Pays-Bas", "icon": "map"},
+            {"id": "histoire", "title": "Un peu d'histoire", "subtitle": "Comprendre le passé", "icon": "book-open-variant"},
+            {"id": "societe", "title": "La société", "subtitle": "Comment ça marche", "icon": "bank-outline"},
+        ],
+    },
 ]
+
+# THEMES aplati (compat + lookup) : chaque thème hérite du domaine, de sa couleur, de son contexte.
+THEMES: List[dict] = []
+for _dom in DOMAINS:
+    for _th in _dom["themes"]:
+        THEMES.append({
+            "id": _th["id"],
+            "title": _th["title"],
+            "subtitle": _th["subtitle"],
+            "icon": _th["icon"],
+            "color": _dom["color"],
+            "domain": _dom["id"],
+            "domain_title": _dom["title"],
+            "character": _dom["character"],
+            "context": _dom["context"],
+        })
+
+
+def _domains_public() -> List[dict]:
+    """Domaines + personnages pour le frontend (sans les prompts d'avatar)."""
+    out = []
+    for d in DOMAINS:
+        ch = CHARACTERS.get(d["character"], {})
+        out.append({
+            "id": d["id"], "title": d["title"], "subtitle": d["subtitle"],
+            "icon": d["icon"], "color": d["color"],
+            "character": {"id": ch.get("id"), "name": ch.get("name"), "role": ch.get("role"), "tagline": ch.get("tagline")},
+            "themes": [
+                {"id": t["id"], "title": t["title"], "subtitle": t["subtitle"], "icon": t["icon"], "color": d["color"]}
+                for t in d["themes"]
+            ],
+        })
+    return out
 
 LEVEL_LABEL = {
     "debutant": "débutant (A1)",
@@ -282,29 +405,63 @@ async def get_themes():
     return THEMES
 
 
+@api_router.get("/domains")
+async def get_domains():
+    """Les 6 mondes avec leurs personnages-guides et leurs étapes."""
+    return _domains_public()
+
+
+@api_router.get("/character/{char_id}/avatar")
+async def get_character_avatar(char_id: str):
+    """Avatar illustré d'un personnage. Généré une fois puis mis en cache (Mongo)."""
+    ch = CHARACTERS.get(char_id)
+    if not ch:
+        raise HTTPException(status_code=404, detail="Personnage introuvable")
+    cache_key = f"avatar::{char_id}::v1"
+    cached = await db.generated_content.find_one({"key": cache_key}, {"_id": 0})
+    if cached and cached.get("content", {}).get("b64"):
+        return {"id": char_id, "image": cached["content"]["b64"]}
+    b64 = await generate_image(ch["avatar_prompt"])
+    if not b64:
+        raise HTTPException(status_code=502, detail="Génération de l'avatar échouée")
+    await db.generated_content.update_one(
+        {"key": cache_key},
+        {"$set": {"key": cache_key, "content": {"b64": b64}, "created_at": now_utc().isoformat()}},
+        upsert=True,
+    )
+    return {"id": char_id, "image": b64}
+
+
 # ----------------------------- Lessons -----------------------------
 @api_router.post("/lessons/generate")
 async def generate_lesson(body: GenerateLessonRequest, user: dict = Depends(get_current_user)):
     theme = next((t for t in THEMES if t["id"] == body.theme_id), None)
     if not theme:
         raise HTTPException(status_code=404, detail="Thème introuvable")
-    cache_key = f"lesson::{body.theme_id}::{body.level}::v2"
+    cache_key = f"lesson::{body.theme_id}::{body.level}::v3"
     if not body.regenerate:
         cached = await db.generated_content.find_one({"key": cache_key}, {"_id": 0})
         if cached:
             return cached["content"]
 
     level = LEVEL_LABEL.get(body.level, "débutant (A1)")
+    domain_context = theme.get("context", "la vie quotidienne")
+    domain_title = theme.get("domain_title", "")
     system = (
-        "Tu es un professeur de néerlandais pour francophones. "
+        "Tu es un professeur de néerlandais pour francophones qui s'installent en Flandre ou aux Pays-Bas. "
+        "Ton objectif n'est PAS le vocabulaire générique : c'est de préparer l'élève à VIVRE et s'INTÉGRER "
+        "(situations réelles, administratif, culture, vie pratique du pays). "
         "Tu réponds UNIQUEMENT avec du JSON valide, sans texte autour, sans markdown."
     )
     prompt = f"""Crée une leçon de néerlandais sur le thème « {theme['title']} » ({theme['subtitle']}) pour un niveau {level}.
+Ce thème fait partie du monde « {domain_title} ». Contexte concret à privilégier : {domain_context}.
+Choisis du vocabulaire et des phrases que l'élève utilisera VRAIMENT dans cette situation réelle en Flandre / aux Pays-Bas (pas du vocabulaire abstrait).
 Renvoie un objet JSON avec EXACTEMENT cette structure:
 {{
   "theme_id": "{body.theme_id}",
   "title": "titre court en français",
   "intro": "1 phrase de contexte en français",
+  "culture_tip": "1 astuce concrète et utile sur ce sujet dans la vraie vie en Flandre/aux Pays-Bas (en français, 1-2 phrases)",
   "vocabulary": [
     {{"dutch": "mot néerlandais", "french": "traduction française", "phon": "transcription phonétique API (IPA) du mot, sans crochets", "phon_fr": "prononciation approximative écrite à la française", "example_nl": "phrase exemple en néerlandais", "example_fr": "traduction de la phrase"}}
   ],
@@ -313,7 +470,7 @@ Renvoie un objet JSON avec EXACTEMENT cette structure:
     {{"type": "translate", "question": "Traduisez en néerlandais : ...", "prompt_fr": "phrase française", "answer": "réponse néerlandaise attendue", "explanation": "explication"}}
   ]
 }}
-Contraintes: 8 mots de vocabulaire pertinents, 6 exercices variés (4 de type "mcq", 2 de type "translate"). Pour les mcq, "answer" est l'index (0-3) de la bonne option. Tout le méta-texte est en français, le vocabulaire cible en néerlandais."""
+Contraintes: 8 mots de vocabulaire pertinents et concrets pour cette situation réelle, 6 exercices variés (4 de type "mcq", 2 de type "translate"). Pour les mcq, "answer" est l'index (0-3) de la bonne option. Tout le méta-texte est en français, le vocabulaire cible en néerlandais."""
 
     content = await llm_json(system, prompt)
     content["theme_id"] = body.theme_id
