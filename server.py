@@ -505,6 +505,34 @@ Contraintes: 8 mots de vocabulaire pertinents et concrets pour cette situation r
     return content
 
 
+# ----------------------------- Test de placement -----------------------------
+@api_router.get("/placement")
+async def placement_test(user: dict = Depends(get_current_user)):
+    """8 questions QCM de difficulté croissante (A1→B2) pour situer le niveau."""
+    cache_key = "placement::v1"
+    cached = await db.generated_content.find_one({"key": cache_key}, {"_id": 0})
+    if cached:
+        return cached["content"]
+    system = (
+        "Tu es un examinateur de néerlandais pour francophones. "
+        "Tu réponds UNIQUEMENT avec du JSON valide, sans texte autour, sans markdown."
+    )
+    prompt = """Crée un test de placement de néerlandais pour francophones, orienté vie réelle en Flandre/aux Pays-Bas.
+8 questions QCM de difficulté CROISSANTE : 2 niveau A1, 2 niveau A2, 2 niveau B1, 2 niveau B2.
+Renvoie un objet JSON EXACTEMENT:
+{
+  "questions": [
+    {"level": "A1", "question": "consigne en français (ex: Comment dit-on \\"bonjour\\" ?)", "options": ["a","b","c","d"], "answer": 0}
+  ]
+}
+Contraintes: exactement 8 questions dans l'ordre A1,A1,A2,A2,B1,B1,B2,B2. "answer" = index (0-3) de la bonne option. Consignes en français, options en néerlandais quand c'est du vocabulaire."""
+    content = await llm_json(system, prompt)
+    await db.generated_content.update_one(
+        {"key": cache_key}, {"$set": {"key": cache_key, "content": content, "created_at": now_utc().isoformat()}}, upsert=True
+    )
+    return content
+
+
 # ----------------------------- Grammar / Writing -----------------------------
 @api_router.post("/grammar/generate")
 async def generate_grammar(body: GenerateLessonRequest, user: dict = Depends(get_current_user)):
