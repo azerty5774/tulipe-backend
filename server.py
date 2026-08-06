@@ -135,6 +135,12 @@ CHARACTERS: Dict[str, dict] = {
         "tagline": "Bonjour, Professor Willem. Explorons ensemble l'histoire et le pays.",
         "avatar_prompt": "Friendly flat vector character portrait of Willem, a kind older Dutch professor around 60 with a short white beard and round glasses, wearing a mustard cardigan, simple cartoon mascot style, soft rounded shapes, plain light cream background, centered head and shoulders, modern app avatar",
     },
+    "bram": {
+        "id": "bram", "name": "Dr. Bram", "role": "Ta santé au quotidien",
+        "color": "#EF4444",
+        "tagline": "Bonjour, je suis le Dr. Bram. On voit ensemble comment se soigner et parler aux médecins.",
+        "avatar_prompt": "Friendly flat vector character portrait of Bram, a reassuring Dutch family doctor man around 40 with short dark hair, wearing a white doctor's coat with a stethoscope, simple cartoon mascot style, soft rounded shapes, plain light cream background, centered head and shoulders, modern app avatar",
+    },
 }
 
 # ----------------------------- Mondes (domaines) -----------------------------
@@ -148,6 +154,8 @@ DOMAINS: List[dict] = [
             {"id": "salutations", "title": "Salutations", "subtitle": "Bonjour, au revoir, ça va ?", "icon": "hand-wave"},
             {"id": "politesse", "title": "Politesse", "subtitle": "Merci, s'il te plaît, pardon", "icon": "hand-heart"},
             {"id": "se-presenter", "title": "Se présenter", "subtitle": "Nom, âge, d'où tu viens", "icon": "account"},
+            {"id": "nombres", "title": "Nombres & heure", "subtitle": "Compter, dire l'heure", "icon": "numeric"},
+            {"id": "jours", "title": "Jours & dates", "subtitle": "Jours, mois, rendez-vous", "icon": "calendar"},
         ],
     },
     {
@@ -159,6 +167,7 @@ DOMAINS: List[dict] = [
             {"id": "cafe", "title": "Au café", "subtitle": "Commander à boire et à manger", "icon": "coffee"},
             {"id": "transports", "title": "Se déplacer", "subtitle": "Train NS, bus, vélo", "icon": "train"},
             {"id": "meteo", "title": "La météo", "subtitle": "Le temps qu'il fait", "icon": "weather-partly-cloudy"},
+            {"id": "telephone", "title": "Au téléphone", "subtitle": "Appeler, prendre rendez-vous", "icon": "phone"},
         ],
     },
     {
@@ -202,6 +211,28 @@ DOMAINS: List[dict] = [
             {"id": "geographie", "title": "Géographie", "subtitle": "Flandre & Pays-Bas", "icon": "map"},
             {"id": "histoire", "title": "Un peu d'histoire", "subtitle": "Comprendre le passé", "icon": "book-open-variant"},
             {"id": "societe", "title": "La société", "subtitle": "Comment ça marche", "icon": "bank-outline"},
+            {"id": "villes", "title": "Les grandes villes", "subtitle": "Amsterdam, Anvers, Gand…", "icon": "city"},
+        ],
+    },
+    {
+        "id": "sante", "title": "La santé", "subtitle": "Médecin, pharmacie, urgences",
+        "icon": "medical-bag", "color": "#EF4444", "character": "bram",
+        "context": "se soigner et gérer sa santé en Flandre/aux Pays-Bas : prendre rendez-vous chez le médecin généraliste (huisarts), expliquer ses symptômes, aller à la pharmacie (apotheek), à l'hôpital (ziekenhuis) et les urgences (112). Vocabulaire concret du corps, des symptômes et des soins.",
+        "themes": [
+            {"id": "medecin", "title": "Chez le médecin", "subtitle": "Expliquer ses symptômes", "icon": "stethoscope"},
+            {"id": "pharmacie", "title": "À la pharmacie", "subtitle": "Médicaments & ordonnance", "icon": "pill"},
+            {"id": "urgences", "title": "Les urgences", "subtitle": "Appeler le 112, réagir", "icon": "ambulance"},
+            {"id": "hopital", "title": "À l'hôpital", "subtitle": "Rendez-vous & examens", "icon": "hospital-building"},
+        ],
+    },
+    {
+        "id": "vie-sociale", "title": "Vie sociale & sorties", "subtitle": "Se faire des amis, sortir",
+        "icon": "account-heart", "color": "#EC4899", "character": "lien",
+        "context": "créer du lien et s'intégrer socialement : se faire des amis, accepter/proposer une invitation, discuter à une fête, rejoindre un club de sport ou une activité, parler de ses loisirs. Le néerlandais informel et convivial du quotidien.",
+        "themes": [
+            {"id": "amis", "title": "Se faire des amis", "subtitle": "Engager la conversation", "icon": "account-multiple"},
+            {"id": "invitations", "title": "Invitations", "subtitle": "Proposer, accepter, refuser", "icon": "party-popper"},
+            {"id": "loisirs", "title": "Loisirs & clubs", "subtitle": "Sport, activités, hobbies", "icon": "soccer"},
         ],
     },
 ]
