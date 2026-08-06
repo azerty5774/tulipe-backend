@@ -75,6 +75,7 @@ class GenerateLessonRequest(BaseModel):
     theme_id: str
     level: str = "debutant"
     regenerate: bool = False
+    part: int = 1
 
 
 class GenerateStoryRequest(BaseModel):
@@ -205,6 +206,15 @@ DOMAINS: List[dict] = [
     },
 ]
 
+# Chaque thème est une SÉRIE de leçons (parties) de difficulté croissante, générées par IA.
+PARTS_PER_THEME = 4
+PART_SPEC = {
+    1: {"level": "debutant", "focus": "le vocabulaire de base et les mots les plus fréquents de la situation"},
+    2: {"level": "debutant", "focus": "du vocabulaire complémentaire et des petites phrases utiles du quotidien"},
+    3: {"level": "intermediaire", "focus": "des mises en situation, questions/réponses et phrases plus complètes"},
+    4: {"level": "intermediaire", "focus": "l'approfondissement : expressions, nuances et formulations plus naturelles"},
+}
+
 # THEMES aplati (compat + lookup) : chaque thème hérite du domaine, de sa couleur, de son contexte.
 THEMES: List[dict] = []
 for _dom in DOMAINS:
@@ -232,7 +242,7 @@ def _domains_public() -> List[dict]:
             "icon": d["icon"], "color": d["color"],
             "character": {"id": ch.get("id"), "name": ch.get("name"), "role": ch.get("role"), "tagline": ch.get("tagline")},
             "themes": [
-                {"id": t["id"], "title": t["title"], "subtitle": t["subtitle"], "icon": t["icon"], "color": d["color"]}
+                {"id": t["id"], "title": t["title"], "subtitle": t["subtitle"], "icon": t["icon"], "color": d["color"], "parts": PARTS_PER_THEME}
                 for t in d["themes"]
             ],
         })
@@ -438,13 +448,15 @@ async def generate_lesson(body: GenerateLessonRequest, user: dict = Depends(get_
     theme = next((t for t in THEMES if t["id"] == body.theme_id), None)
     if not theme:
         raise HTTPException(status_code=404, detail="Thème introuvable")
-    cache_key = f"lesson::{body.theme_id}::{body.level}::v3"
+    part = max(1, min(PARTS_PER_THEME, body.part))
+    spec = PART_SPEC.get(part, PART_SPEC[1])
+    cache_key = f"lesson::{body.theme_id}::p{part}::v4"
     if not body.regenerate:
         cached = await db.generated_content.find_one({"key": cache_key}, {"_id": 0})
         if cached:
             return cached["content"]
 
-    level = LEVEL_LABEL.get(body.level, "débutant (A1)")
+    level = LEVEL_LABEL.get(spec["level"], "débutant (A1)")
     domain_context = theme.get("context", "la vie quotidienne")
     domain_title = theme.get("domain_title", "")
     system = (
@@ -453,8 +465,10 @@ async def generate_lesson(body: GenerateLessonRequest, user: dict = Depends(get_
         "(situations réelles, administratif, culture, vie pratique du pays). "
         "Tu réponds UNIQUEMENT avec du JSON valide, sans texte autour, sans markdown."
     )
-    prompt = f"""Crée une leçon de néerlandais sur le thème « {theme['title']} » ({theme['subtitle']}) pour un niveau {level}.
+    prompt = f"""Crée la PARTIE {part}/{PARTS_PER_THEME} d'une série de leçons de néerlandais sur le thème « {theme['title']} » ({theme['subtitle']}) pour un niveau {level}.
 Ce thème fait partie du monde « {domain_title} ». Contexte concret à privilégier : {domain_context}.
+Pour CETTE partie, concentre-toi sur : {spec['focus']}.
+IMPORTANT : c'est la partie {part}, donc propose du vocabulaire et des exemples DIFFÉRENTS et plus riches que ce qu'on verrait dans les parties précédentes du même thème (ne répète pas les mots les plus évidents si part > 1). Adapte la difficulté au niveau {level}.
 Choisis du vocabulaire et des phrases que l'élève utilisera VRAIMENT dans cette situation réelle en Flandre / aux Pays-Bas (pas du vocabulaire abstrait).
 Renvoie un objet JSON avec EXACTEMENT cette structure:
 {{
