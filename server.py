@@ -135,12 +135,6 @@ CHARACTERS: Dict[str, dict] = {
         "tagline": "Bonjour, Professor Willem. Explorons ensemble l'histoire et le pays.",
         "avatar_prompt": "Friendly flat vector character portrait of Willem, a kind older Dutch professor around 60 with a short white beard and round glasses, wearing a mustard cardigan, simple cartoon mascot style, soft rounded shapes, plain light cream background, centered head and shoulders, modern app avatar",
     },
-    "bram": {
-        "id": "bram", "name": "Dr. Bram", "role": "Ta santé au quotidien",
-        "color": "#EF4444",
-        "tagline": "Bonjour, je suis le Dr. Bram. On voit ensemble comment se soigner et parler aux médecins.",
-        "avatar_prompt": "Friendly flat vector character portrait of Bram, a reassuring Dutch family doctor man around 40 with short dark hair, wearing a white doctor's coat with a stethoscope, simple cartoon mascot style, soft rounded shapes, plain light cream background, centered head and shoulders, modern app avatar",
-    },
 }
 
 # ----------------------------- Mondes (domaines) -----------------------------
@@ -154,8 +148,8 @@ DOMAINS: List[dict] = [
             {"id": "salutations", "title": "Salutations", "subtitle": "Bonjour, au revoir, ça va ?", "icon": "hand-wave"},
             {"id": "politesse", "title": "Politesse", "subtitle": "Merci, s'il te plaît, pardon", "icon": "hand-heart"},
             {"id": "se-presenter", "title": "Se présenter", "subtitle": "Nom, âge, d'où tu viens", "icon": "account"},
-            {"id": "nombres", "title": "Nombres & heure", "subtitle": "Compter, dire l'heure", "icon": "numeric"},
-            {"id": "jours", "title": "Jours & dates", "subtitle": "Jours, mois, rendez-vous", "icon": "calendar"},
+            {"id": "nombres", "title": "Les nombres", "subtitle": "Compter, prix, quantités", "icon": "numeric"},
+            {"id": "jours-heure", "title": "Jours & heure", "subtitle": "Dire la date et l'heure", "icon": "calendar-clock"},
         ],
     },
     {
@@ -167,7 +161,7 @@ DOMAINS: List[dict] = [
             {"id": "cafe", "title": "Au café", "subtitle": "Commander à boire et à manger", "icon": "coffee"},
             {"id": "transports", "title": "Se déplacer", "subtitle": "Train NS, bus, vélo", "icon": "train"},
             {"id": "meteo", "title": "La météo", "subtitle": "Le temps qu'il fait", "icon": "weather-partly-cloudy"},
-            {"id": "telephone", "title": "Au téléphone", "subtitle": "Appeler, prendre rendez-vous", "icon": "phone"},
+            {"id": "telephone", "title": "Au téléphone", "subtitle": "Appeler, prendre RDV", "icon": "phone"},
         ],
     },
     {
@@ -180,6 +174,7 @@ DOMAINS: List[dict] = [
             {"id": "banque", "title": "La banque", "subtitle": "Ouvrir un compte", "icon": "bank"},
             {"id": "logement", "title": "Le logement", "subtitle": "Chercher & louer", "icon": "home-search"},
             {"id": "sante-admin", "title": "Santé & assurance", "subtitle": "Médecin, mutuelle", "icon": "hospital-box"},
+            {"id": "impots", "title": "Impôts & courrier", "subtitle": "Comprendre les lettres officielles", "icon": "email-open"},
         ],
     },
     {
@@ -191,6 +186,7 @@ DOMAINS: List[dict] = [
             {"id": "entretien", "title": "L'entretien", "subtitle": "Répondre aux questions", "icon": "account-tie"},
             {"id": "bureau", "title": "Au bureau", "subtitle": "Avec les collègues", "icon": "briefcase"},
             {"id": "emails", "title": "Emails pro", "subtitle": "Écrire correctement", "icon": "email"},
+            {"id": "salaire", "title": "Salaire & contrat", "subtitle": "Fiche de paie, congés", "icon": "cash"},
         ],
     },
     {
@@ -201,6 +197,8 @@ DOMAINS: List[dict] = [
             {"id": "fetes", "title": "Les fêtes", "subtitle": "Sinterklaas, Koningsdag", "icon": "party-popper"},
             {"id": "cuisine", "title": "La cuisine", "subtitle": "Spécialités locales", "icon": "food-croissant"},
             {"id": "savoir-vivre", "title": "Savoir-vivre", "subtitle": "Codes & coutumes", "icon": "handshake"},
+            {"id": "sport", "title": "Sport & loisirs", "subtitle": "Vélo, football, sorties", "icon": "bike"},
+            {"id": "medias", "title": "Médias & TV", "subtitle": "Séries, radio, musique", "icon": "television-classic"},
         ],
     },
     {
@@ -211,40 +209,16 @@ DOMAINS: List[dict] = [
             {"id": "geographie", "title": "Géographie", "subtitle": "Flandre & Pays-Bas", "icon": "map"},
             {"id": "histoire", "title": "Un peu d'histoire", "subtitle": "Comprendre le passé", "icon": "book-open-variant"},
             {"id": "societe", "title": "La société", "subtitle": "Comment ça marche", "icon": "bank-outline"},
-            {"id": "villes", "title": "Les grandes villes", "subtitle": "Amsterdam, Anvers, Gand…", "icon": "city"},
-        ],
-    },
-    {
-        "id": "sante", "title": "La santé", "subtitle": "Médecin, pharmacie, urgences",
-        "icon": "medical-bag", "color": "#EF4444", "character": "bram",
-        "context": "se soigner et gérer sa santé en Flandre/aux Pays-Bas : prendre rendez-vous chez le médecin généraliste (huisarts), expliquer ses symptômes, aller à la pharmacie (apotheek), à l'hôpital (ziekenhuis) et les urgences (112). Vocabulaire concret du corps, des symptômes et des soins.",
-        "themes": [
-            {"id": "medecin", "title": "Chez le médecin", "subtitle": "Expliquer ses symptômes", "icon": "stethoscope"},
-            {"id": "pharmacie", "title": "À la pharmacie", "subtitle": "Médicaments & ordonnance", "icon": "pill"},
-            {"id": "urgences", "title": "Les urgences", "subtitle": "Appeler le 112, réagir", "icon": "ambulance"},
-            {"id": "hopital", "title": "À l'hôpital", "subtitle": "Rendez-vous & examens", "icon": "hospital-building"},
-        ],
-    },
-    {
-        "id": "vie-sociale", "title": "Vie sociale & sorties", "subtitle": "Se faire des amis, sortir",
-        "icon": "account-heart", "color": "#EC4899", "character": "lien",
-        "context": "créer du lien et s'intégrer socialement : se faire des amis, accepter/proposer une invitation, discuter à une fête, rejoindre un club de sport ou une activité, parler de ses loisirs. Le néerlandais informel et convivial du quotidien.",
-        "themes": [
-            {"id": "amis", "title": "Se faire des amis", "subtitle": "Engager la conversation", "icon": "account-multiple"},
-            {"id": "invitations", "title": "Invitations", "subtitle": "Proposer, accepter, refuser", "icon": "party-popper"},
-            {"id": "loisirs", "title": "Loisirs & clubs", "subtitle": "Sport, activités, hobbies", "icon": "soccer"},
+            {"id": "villes", "title": "Les villes", "subtitle": "Amsterdam, Anvers, Gand…", "icon": "city"},
+            {"id": "actualite", "title": "L'actualité", "subtitle": "Comprendre les infos", "icon": "newspaper"},
         ],
     },
 ]
 
-# Chaque thème est une SÉRIE de leçons (parties) de difficulté croissante, générées par IA.
+# Profondeur : chaque thème est une série de leçons (parties) à difficulté montante,
+# toutes générées par l'IA → contenu quasi infini sans écriture manuelle.
 PARTS_PER_THEME = 4
-PART_SPEC = {
-    1: {"level": "debutant", "focus": "le vocabulaire de base et les mots les plus fréquents de la situation"},
-    2: {"level": "debutant", "focus": "du vocabulaire complémentaire et des petites phrases utiles du quotidien"},
-    3: {"level": "intermediaire", "focus": "des mises en situation, questions/réponses et phrases plus complètes"},
-    4: {"level": "intermediaire", "focus": "l'approfondissement : expressions, nuances et formulations plus naturelles"},
-}
+PART_LEVEL = {1: "debutant", 2: "debutant", 3: "intermediaire", 4: "avance"}
 
 # THEMES aplati (compat + lookup) : chaque thème hérite du domaine, de sa couleur, de son contexte.
 THEMES: List[dict] = []
@@ -479,27 +453,33 @@ async def generate_lesson(body: GenerateLessonRequest, user: dict = Depends(get_
     theme = next((t for t in THEMES if t["id"] == body.theme_id), None)
     if not theme:
         raise HTTPException(status_code=404, detail="Thème introuvable")
-    part = max(1, min(PARTS_PER_THEME, body.part))
-    spec = PART_SPEC.get(part, PART_SPEC[1])
-    cache_key = f"lesson::{body.theme_id}::p{part}::v4"
+    part = max(1, int(body.part or 1))
+    level_id = PART_LEVEL.get(part, body.level)
+    cache_key = f"lesson::{body.theme_id}::part{part}::v4"
     if not body.regenerate:
         cached = await db.generated_content.find_one({"key": cache_key}, {"_id": 0})
         if cached:
             return cached["content"]
 
-    level = LEVEL_LABEL.get(spec["level"], "débutant (A1)")
+    level = LEVEL_LABEL.get(level_id, "débutant (A1)")
     domain_context = theme.get("context", "la vie quotidienne")
     domain_title = theme.get("domain_title", "")
+    part_note = (
+        f"C'est la PARTIE {part} de ce thème (progression de difficulté). "
+        f"Propose du vocabulaire et des situations DIFFÉRENTS et plus riches que les parties précédentes : "
+        f"ne répète pas les mots les plus basiques d'une partie 1, va vers des mots, phrases et situations plus avancés au fil des parties."
+        if part > 1 else
+        "C'est la PARTIE 1 (introduction) : les mots et phrases les plus essentiels et fréquents du thème."
+    )
     system = (
         "Tu es un professeur de néerlandais pour francophones qui s'installent en Flandre ou aux Pays-Bas. "
         "Ton objectif n'est PAS le vocabulaire générique : c'est de préparer l'élève à VIVRE et s'INTÉGRER "
         "(situations réelles, administratif, culture, vie pratique du pays). "
         "Tu réponds UNIQUEMENT avec du JSON valide, sans texte autour, sans markdown."
     )
-    prompt = f"""Crée la PARTIE {part}/{PARTS_PER_THEME} d'une série de leçons de néerlandais sur le thème « {theme['title']} » ({theme['subtitle']}) pour un niveau {level}.
+    prompt = f"""Crée une leçon de néerlandais sur le thème « {theme['title']} » ({theme['subtitle']}) pour un niveau {level}.
 Ce thème fait partie du monde « {domain_title} ». Contexte concret à privilégier : {domain_context}.
-Pour CETTE partie, concentre-toi sur : {spec['focus']}.
-IMPORTANT : c'est la partie {part}, donc propose du vocabulaire et des exemples DIFFÉRENTS et plus riches que ce qu'on verrait dans les parties précédentes du même thème (ne répète pas les mots les plus évidents si part > 1). Adapte la difficulté au niveau {level}.
+{part_note}
 Choisis du vocabulaire et des phrases que l'élève utilisera VRAIMENT dans cette situation réelle en Flandre / aux Pays-Bas (pas du vocabulaire abstrait).
 Renvoie un objet JSON avec EXACTEMENT cette structure:
 {{
