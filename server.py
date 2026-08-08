@@ -86,6 +86,7 @@ class GenerateStoryRequest(BaseModel):
 
 class TTSRequest(BaseModel):
     text: str
+    speed: float = 1.0
 
 
 class FlashcardReview(BaseModel):
@@ -744,16 +745,30 @@ async def word_info(body: WordInfoRequest, user: dict = Depends(get_current_user
 # ----------------------------- TTS -----------------------------
 @api_router.post("/tts")
 async def tts(body: TTSRequest, user: dict = Depends(get_current_user)):
-    if not body.text.strip():
+    text = body.text.strip()
+    if not text:
         raise HTTPException(status_code=400, detail="Texte vide")
+    speed = max(0.25, min(4.0, float(body.speed or 1.0)))
+    cache_key = f"tts::{DUTCH_VOICE}::{round(speed, 2)}::{text[:800]}"
+    cached = await db.tts_cache.find_one({"key": cache_key}, {"_id": 0})
+    if cached:
+        return {"audio_base64": cached["audio_base64"], "format": "mp3"}
     try:
         speech = await oai.audio.speech.create(
-            model="tts-1", voice=DUTCH_VOICE, input=body.text[:800], response_format="mp3"
+            model="tts-1-hd", voice=DUTCH_VOICE, input=text[:800], response_format="mp3", speed=speed
         )
         b64 = base64.b64encode(speech.content).decode("utf-8")
     except Exception as e:
         logger.error(f"TTS error: {e}")
         raise HTTPException(status_code=502, detail="Synthèse vocale indisponible")
+    try:
+        await db.tts_cache.update_one(
+            {"key": cache_key},
+            {"$set": {"key": cache_key, "audio_base64": b64, "created_at": now_utc().isoformat()}},
+            upsert=True,
+        )
+    except Exception:
+        pass
     return {"audio_base64": b64, "format": "mp3"}
 
 
