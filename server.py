@@ -836,13 +836,21 @@ async def award_xp(user_id: str, amount: int, theme_id: Optional[str] = None) ->
     daily = prog.get("daily_xp") or {}
     today_xp = (daily.get("xp", 0) if daily.get("date") == today else 0) + amount
     xp = prog.get("xp", 0) + amount
-    upd = {"xp": xp, "streak": streak, "last_active": today, "daily_xp": {"date": today, "xp": today_xp}}
+    active = prog.get("active_days") or []
+    if today not in active:
+        active.append(today)
+        active = sorted(active)[-120:]
+    best = max(prog.get("best_streak", 0), streak)
+    upd = {
+        "xp": xp, "streak": streak, "best_streak": best, "last_active": today,
+        "daily_xp": {"date": today, "xp": today_xp}, "active_days": active,
+    }
     completed = prog.get("completed", {})
     if theme_id:
         completed[theme_id] = completed.get(theme_id, 0) + 1
         upd["completed"] = completed
     await db.progress.update_one({"user_id": user_id}, {"$set": upd}, upsert=True)
-    return {"xp": xp, "streak": streak, "today_xp": today_xp, "completed": completed}
+    return {"xp": xp, "streak": streak, "best_streak": best, "today_xp": today_xp, "completed": completed}
 
 
 @api_router.get("/progress")
@@ -856,6 +864,8 @@ async def get_progress(user: dict = Depends(get_current_user)):
     daily = prog.get("daily_xp") or {}
     prog["today_xp"] = daily.get("xp", 0) if daily.get("date") == today_str() else 0
     prog["daily_goal"] = prog.get("daily_goal", 30)
+    prog["best_streak"] = prog.get("best_streak", prog.get("streak", 0))
+    prog["active_days"] = prog.get("active_days", [])
     prog["due_cards"] = due
     prog["total_cards"] = total_cards
     return prog
