@@ -10,7 +10,7 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Annotated, Any, Dict
 
-from fastapi import FastAPI, APIRouter, Header, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, APIRouter, Header, HTTPException, UploadFile, File, Form, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
