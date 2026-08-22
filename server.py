@@ -355,6 +355,158 @@ async def create_guest():
     return {"session_token": session_token, "user": user}
 
 
+# ---- Email / mot de passe (autonome, sans dépendance externe) ----
+import hashlib as _hashlib
+import hmac as _hmac
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+
+
+def _hash_password(pw: str) -> str:
+    salt = os.urandom(16)
+    dk = _hashlib.pbkdf2_hmac("sha256", pw.encode("utf-8"), salt, 200000)
+    return "pbkdf2$200000$" + base64.b64encode(salt).decode() + "$" + base64.b64encode(dk).decode()
+
+
+def _verify_password(pw: str, stored: str) -> bool:
+    try:
+        _algo, iters, salt_b64, dk_b64 = stored.split("$")
+        salt = base64.b64decode(salt_b64)
+        expected = base64.b64decode(dk_b64)
+        dk = _hashlib.pbkdf2_hmac("sha256", pw.encode("utf-8"), salt, int(iters))
+        return _hmac.compare_digest(dk, expected)
+    except Exception:
+        return False
+
+
+async def _create_session_token(user_id: str, guest: bool = False) -> str:
+    token = ("guest-" if guest else "sess-") + uuid.uuid4().hex
+    await db.user_sessions.insert_one({
+        "session_token": token,
+        "user_id": user_id,
+        "created_at": now_utc(),
+        "expires_at": now_utc() + timedelta(days=30),
+    })
+    return token
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class GoogleRequest(BaseModel):
+    id_token: str
+
+
+class UpgradeRequest(BaseModel):
+    email: str
+    password: str
+    name: Optional[str] = None
+
+
+def _norm_email(e: str) -> str:
+    return (e or "").strip().lower()
+
+
+@api_router.post("/auth/register")
+async def register(body: RegisterRequest):
+    email = _norm_email(body.email)
+    if "@" not in email or "." not in email.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Adresse email invalide")
+    if len(body.password or "") < 6:
+        raise HTTPException(status_code=400, detail="Mot de passe : au moins 6 caractères")
+    existing = await db.users.find_one({"email": email}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=409, detail="Un compte existe déjà avec cet email")
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    await db.users.insert_one({
+        "user_id": user_id,
+        "email": email,
+        "name": (body.name or email.split("@")[0]).strip(),
+        "picture": None,
+        "is_guest": False,
+        "password_hash": _hash_password(body.password),
+        "created_at": now_utc().isoformat(),
+    })
+    await db.progress.insert_one({
+        "user_id": user_id, "xp": 0, "streak": 0, "last_active": None,
+        "completed": {}, "words_learned": 0,
+    })
+    token = await _create_session_token(user_id)
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    return {"session_token": token, "user": user}
+
+
+@api_router.post("/auth/login")
+async def login(body: LoginRequest):
+    email = _norm_email(body.email)
+    user = await db.users.find_one({"email": email})
+    if not user or not user.get("password_hash") or not _verify_password(body.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    token = await _create_session_token(user["user_id"])
+    user.pop("_id", None)
+    user.pop("password_hash", None)
+    return {"session_token": token, "user": user}
+
+
+@api_router.post("/auth/google")
+async def google_auth(body: GoogleRequest):
+    async with httpx.AsyncClient(timeout=15) as hc:
+        r = await hc.get("https://oauth2.googleapis.com/tokeninfo", params={"id_token": body.id_token})
+    if r.status_code != 200:
+        raise HTTPException(status_code=401, detail="Jeton Google invalide")
+    data = r.json()
+    if GOOGLE_CLIENT_ID and data.get("aud") != GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=401, detail="Application Google non reconnue")
+    email = _norm_email(data.get("email", ""))
+    if not email:
+        raise HTTPException(status_code=401, detail="Email Google introuvable")
+    existing = await db.users.find_one({"email": email})
+    if existing:
+        user_id = existing["user_id"]
+        await db.users.update_one({"user_id": user_id}, {"$set": {"name": data.get("name") or existing.get("name"), "picture": data.get("picture")}})
+    else:
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        await db.users.insert_one({
+            "user_id": user_id, "email": email, "name": data.get("name") or email.split("@")[0],
+            "picture": data.get("picture"), "is_guest": False, "created_at": now_utc().isoformat(),
+        })
+        await db.progress.insert_one({
+            "user_id": user_id, "xp": 0, "streak": 0, "last_active": None, "completed": {}, "words_learned": 0,
+        })
+    token = await _create_session_token(user_id)
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    return {"session_token": token, "user": user}
+
+
+@api_router.post("/auth/upgrade")
+async def upgrade_guest(body: UpgradeRequest, user: dict = Depends(get_current_user)):
+    """Transforme un compte invité en vrai compte email/mot de passe, en gardant la progression."""
+    email = _norm_email(body.email)
+    if "@" not in email or "." not in email.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Adresse email invalide")
+    if len(body.password or "") < 6:
+        raise HTTPException(status_code=400, detail="Mot de passe : au moins 6 caractères")
+    clash = await db.users.find_one({"email": email, "user_id": {"$ne": user["user_id"]}}, {"_id": 0})
+    if clash:
+        raise HTTPException(status_code=409, detail="Un compte existe déjà avec cet email")
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {
+        "email": email,
+        "name": (body.name or user.get("name") or email.split("@")[0]).strip(),
+        "is_guest": False,
+        "password_hash": _hash_password(body.password),
+    }})
+    updated = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "password_hash": 0})
+    return {"user": updated}
+
+
 @api_router.post("/auth/session")
 async def create_session(body: SessionRequest):
     async with httpx.AsyncClient(timeout=20) as hc:
@@ -404,6 +556,7 @@ from fastapi import Depends
 
 @api_router.get("/me")
 async def me(user: dict = Depends(get_current_user)):
+    user.pop("password_hash", None)
     return user
 
 
